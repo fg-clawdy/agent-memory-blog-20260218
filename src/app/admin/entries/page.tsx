@@ -35,9 +35,9 @@ export default async function AdminEntriesPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {entries.map((entry: any) => (
+          {entries.map((entry) => (
             <div
-              key={entry.id}
+              key={entry.id as string | number}
               className="bg-white rounded-lg shadow p-6 hover:shadow-md transition"
             >
               <div className="flex justify-between items-start mb-2">
