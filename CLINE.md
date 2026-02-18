@@ -1,42 +1,93 @@
-# Task: Initialize Next.js project with TypeScript
+# Task: Set up Vercel Postgres and database schema
 
 ## Objective
-Initialize Next.js 14 with App Router, TypeScript, Tailwind CSS, and ESLint
+Create PostgreSQL schema for memory_entries, api_tokens, and admin_users tables
 
 ## Acceptance Criteria
-- npx create-next-app@latest runs successfully
-- TypeScript strict mode enabled
-- Tailwind CSS configured and working
-- ESLint with recommended rules
-- Git repository initialized (already cloned, so just verify working)
+- Vercel Postgres provisioned (or local postgres for dev)
+- Migration file with all three tables
+- Indexes on agent, date, tags, project_id
+- Seed data for initial admin user
 
 ## Tech Stack
 - Frontend: Next.js 14 App Router
-- Backend: Next.js API Routes
+- Backend: Next.js API Routes  
 - Database: Vercel Postgres
 - Auth: NextAuth.js
-- Deployment: Vercel
 
-## Current Project State
-- Repo already cloned at `/home/ateam/projects/agent-memory-blog-20260218`
-- Currently has: prd.json, prd.md, NOW.md
-- Need to run `npx create-next-app@latest` to scaffold the app
+## Dependencies
+- story-001: ✅ Complete
 
-## Known Pitfalls
-- When running create-next-app, use `--typescript --tailwind --eslint --app --src-dir --import-alias "@/*"` flags
-- Do NOT use `--no-git` since repo is already initialized
-- Use `--use-npm` to avoid npm vs yarn prompts
+## Database Schema
 
-## Command to Run
-```bash
-cd /home/ateam/projects/agent-memory-blog-20260218
-npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias "@/*" --use-npm --yes
+### Table: admin_users
+```sql
+CREATE TABLE admin_users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
+### Table: api_tokens
+```sql
+CREATE TABLE api_tokens (
+  id SERIAL PRIMARY KEY,
+  token_hash VARCHAR(64) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  agent_tag VARCHAR(100),
+  created_at TIMESTAMP DEFAULT NOW(),
+  last_used_at TIMESTAMP,
+  revoked_at TIMESTAMP,
+  is_revoked BOOLEAN DEFAULT FALSE
+);
+```
+
+### Table: memory_entries
+```sql
+CREATE TABLE memory_entries (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(500) NOT NULL,
+  summary TEXT,
+  content TEXT NOT NULL,
+  agent VARCHAR(100) NOT NULL,
+  project_id VARCHAR(100),
+  tags TEXT[],
+  lessons_learned TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_memory_agent ON memory_entries(agent);
+CREATE INDEX idx_memory_date ON memory_entries(created_at);
+CREATE INDEX idx_memory_tags ON memory_entries USING GIN(tags);
+CREATE INDEX idx_memory_project ON memory_entries(project_id);
+```
+
+## Seed Data
+Insert initial admin user:
+- email: aja@ateam.local
+- password_hash: Use bcrypt hash of "Ag3ntM3m0ry#2026!Xq"
+
+## Package to Install
+```bash
+npm install @vercel/postgres
+# or
+npm install pg
+```
+
+## Files to Create
+1. `src/lib/db.ts` - Database connection
+2. `src/lib/schema.sql` - SQL migration file  
+3. `src/scripts/seed-admin.ts` - Seed script
+4. `.env.local` - Database URL (use dummy for now, real one set in Vercel)
+
 ## Commit Format
-When done: `git add -A && git commit -m "feat: initialize nextjs-14-project-with-typescript"`
+When done: `git add -A && git commit -m "feat: setup-postgres-schema-and-tables"`
 
 ## CRITICAL
-- Run the create-next-app command to scaffold the project
-- Verify TypeScript, Tailwind, and ESLint are working by running `npm run build` or checking config files
+- Run seed script to create admin user
+- Verify tables exist with psql or drizzle/console
 - Do NOT start other tasks — only implement THIS task
