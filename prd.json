@@ -51,7 +51,7 @@
       ],
       "dependencies": ["story-002"],
       "estimatedComplexity": "medium",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-004",
@@ -65,7 +65,7 @@
       ],
       "dependencies": ["story-002"],
       "estimatedComplexity": "medium",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-005",
@@ -79,7 +79,7 @@
       ],
       "dependencies": ["story-004"],
       "estimatedComplexity": "medium",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-006",
@@ -94,7 +94,7 @@
       ],
       "dependencies": ["story-005"],
       "estimatedComplexity": "medium",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-007",
@@ -106,7 +106,7 @@
       ],
       "dependencies": ["story-006"],
       "estimatedComplexity": "low",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-008",
@@ -119,7 +119,7 @@
       ],
       "dependencies": ["story-003"],
       "estimatedComplexity": "medium",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-009",
@@ -133,7 +133,7 @@
       ],
       "dependencies": ["story-008"],
       "estimatedComplexity": "medium",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-010",
@@ -148,7 +148,7 @@
       ],
       "dependencies": ["story-003"],
       "estimatedComplexity": "low",
-      "passes": true
+      "passes": false
     },
     {
       "id": "story-011",
@@ -162,7 +162,7 @@
       ],
       "dependencies": ["story-010"],
       "estimatedComplexity": "low",
-      "passes": true
+      "passes": false
     }
   ]
 }

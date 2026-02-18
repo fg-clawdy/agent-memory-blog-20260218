@@ -1,93 +1,134 @@
-# Task: Set up Vercel Postgres and database schema
+# Task: Configure NextAuth.js with credentials provider
 
 ## Objective
-Create PostgreSQL schema for memory_entries, api_tokens, and admin_users tables
+Set up NextAuth for admin login with aja@ateam.local
 
 ## Acceptance Criteria
-- Vercel Postgres provisioned (or local postgres for dev)
-- Migration file with all three tables
-- Indexes on agent, date, tags, project_id
-- Seed data for initial admin user
+- NextAuth.js installed and configured
+- Credentials provider for admin login
+- Session management working
+- Protected /admin routes
 
 ## Tech Stack
 - Frontend: Next.js 14 App Router
 - Backend: Next.js API Routes  
 - Database: Vercel Postgres
-- Auth: NextAuth.js
+- Auth: NextAuth.js v5 (or v4)
 
 ## Dependencies
-- story-001: ✅ Complete
+- story-002: ✅ Complete
 
-## Database Schema
+## Implementation Steps
 
-### Table: admin_users
-```sql
-CREATE TABLE admin_users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-### Table: api_tokens
-```sql
-CREATE TABLE api_tokens (
-  id SERIAL PRIMARY KEY,
-  token_hash VARCHAR(64) UNIQUE NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  agent_tag VARCHAR(100),
-  created_at TIMESTAMP DEFAULT NOW(),
-  last_used_at TIMESTAMP,
-  revoked_at TIMESTAMP,
-  is_revoked BOOLEAN DEFAULT FALSE
-);
-```
-
-### Table: memory_entries
-```sql
-CREATE TABLE memory_entries (
-  id SERIAL PRIMARY KEY,
-  title VARCHAR(500) NOT NULL,
-  summary TEXT,
-  content TEXT NOT NULL,
-  agent VARCHAR(100) NOT NULL,
-  project_id VARCHAR(100),
-  tags TEXT[],
-  lessons_learned TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_memory_agent ON memory_entries(agent);
-CREATE INDEX idx_memory_date ON memory_entries(created_at);
-CREATE INDEX idx_memory_tags ON memory_entries USING GIN(tags);
-CREATE INDEX idx_memory_project ON memory_entries(project_id);
-```
-
-## Seed Data
-Insert initial admin user:
-- email: aja@ateam.local
-- password_hash: Use bcrypt hash of "Ag3ntM3m0ry#2026!Xq"
-
-## Package to Install
+### 1. Install NextAuth
 ```bash
-npm install @vercel/postgres
-# or
-npm install pg
+npm install next-auth
 ```
 
-## Files to Create
-1. `src/lib/db.ts` - Database connection
-2. `src/lib/schema.sql` - SQL migration file  
-3. `src/scripts/seed-admin.ts` - Seed script
-4. `.env.local` - Database URL (use dummy for now, real one set in Vercel)
+### 2. Create auth configuration
+- `src/app/api/auth/[...nextauth]/route.ts` - NextAuth API route
+- `src/lib/auth.ts` - Auth configuration with credentials provider
+- `src/middleware.ts` - For protecting /admin routes
+
+### 3. Auth Config (src/lib/auth.ts)
+```typescript
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { sql } from "@vercel/postgres";
+import bcrypt from "bcrypt";
+
+export const authOptions: NextAuthOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Admin Login",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+        
+        const result = await sql`
+          SELECT id, email, password_hash 
+          FROM admin_users 
+          WHERE email = ${credentials.email}
+        `;
+        
+        if (result.rowCount === 0) {
+          return null;
+        }
+        
+        const user = result.rows[0];
+        const isValid = await bcrypt.compare(credentials.password, user.password_hash);
+        
+        if (!isValid) {
+          return null;
+        }
+        
+        return {
+          id: user.id.toString(),
+          email: user.email,
+        };
+      }
+    })
+  ],
+  pages: {
+    signIn: "/admin/login",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    }
+  }
+};
+```
+
+### 4. Create API route (src/app/api/auth/[...nextauth]/route.ts)
+```typescript
+import NextAuth from "next-auth";
+import { authOptions } from "@/lib/auth";
+
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };
+```
+
+### 5. Create middleware (src/middleware.ts)
+```typescript
+export { default } from "next-auth/middleware";
+
+export const config = {
+  matcher: ["/admin/:path*"],
+};
+```
+
+### 6. Create login page (src/app/admin/login/page.tsx)
+- Simple form with email/password
+- Uses NextAuth signIn()
+
+### 7. Create admin layout (src/app/admin/layout.tsx)
+- Check session, redirect to login if not authenticated
 
 ## Commit Format
-When done: `git add -A && git commit -m "feat: setup-postgres-schema-and-tables"`
+When done: `git add -A && git commit -m "feat: configure-nextauthjs-with-credentials-provider"`
 
 ## CRITICAL
-- Run seed script to create admin user
-- Verify tables exist with psql or drizzle/console
+- Use NextAuth v4 or v5 (check what's latest stable)
+- Protect /admin routes with middleware
+- Do NOT store plain passwords - use bcrypt (already installed)
 - Do NOT start other tasks — only implement THIS task
