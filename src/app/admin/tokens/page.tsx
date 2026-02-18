@@ -105,7 +105,7 @@ export default function AdminTokensPage() {
           <div className="mb-4 p-3 bg-green-100 border border-green-400 rounded">
             <p className="font-semibold text-green-800">Token Created!</p>
             <p className="text-sm text-green-700 mb-2">
-              Copy this token now - you won't be able to see it again:
+              Copy this token now - you won&apos;t be able to see it again:
             </p>
             <code className="block bg-white p-2 rounded text-sm break-all">
               {createdToken}
