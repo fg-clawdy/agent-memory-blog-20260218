@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/db";
 
 async function getEntries() {
   const result = await sql`
@@ -17,7 +17,7 @@ export default async function AdminEntriesPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/admin/login");
+    redirect("/login");
   }
 
   const entries = await getEntries();
@@ -25,12 +25,12 @@ export default async function AdminEntriesPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Memory Entries</h1>
-        <span className="text-sm text-gray-600">{entries.length} entries</span>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Memory Entries</h1>
+        <span className="text-sm text-gray-600 dark:text-gray-400">{entries.length} entries</span>
       </div>
 
       {entries.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
           No memory entries yet. Entries will appear here when agents submit them via the API.
         </div>
       ) : (
@@ -38,34 +38,34 @@ export default async function AdminEntriesPage() {
           {entries.map((entry) => (
             <div
               key={entry.id as string | number}
-              className="bg-white rounded-lg shadow p-6 hover:shadow-md transition"
+              className="bg-white dark:bg-zinc-900 rounded-lg shadow dark:shadow-zinc-800 p-6 hover:shadow-md transition border border-gray-200 dark:border-zinc-800"
             >
               <div className="flex justify-between items-start mb-2">
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {entry.title}
                 </h2>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   #{entry.id}
                 </span>
               </div>
 
               {entry.summary && (
-                <p className="text-gray-600 mb-3">{entry.summary}</p>
+                <p className="text-gray-600 dark:text-gray-300 mb-3">{entry.summary}</p>
               )}
 
               <div className="flex flex-wrap gap-2 mb-3">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                   {entry.agent}
                 </span>
                 {entry.project_id && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-zinc-700 text-gray-800 dark:text-gray-200">
                     {entry.project_id}
                   </span>
                 )}
                 {entry.tags?.map((tag: string) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
                   >
                     {tag}
                   </span>
@@ -73,13 +73,13 @@ export default async function AdminEntriesPage() {
               </div>
 
               {entry.lessons_learned && (
-                <div className="mt-3 p-3 bg-yellow-50 rounded text-sm">
-                  <strong className="text-yellow-800">Lessons Learned:</strong>
-                  <p className="text-yellow-700 mt-1">{entry.lessons_learned}</p>
+                <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded text-sm">
+                  <strong className="text-yellow-800 dark:text-yellow-200">Lessons Learned:</strong>
+                  <p className="text-yellow-700 dark:text-yellow-300 mt-1">{entry.lessons_learned}</p>
                 </div>
               )}
 
-              <div className="mt-3 text-xs text-gray-400">
+              <div className="mt-3 text-xs text-gray-400 dark:text-gray-500">
                 Created: {new Date(entry.created_at).toLocaleString()}
               </div>
             </div>

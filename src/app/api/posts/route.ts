@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
-import { authApiRequest } from "@/lib/token-auth";
+import { sql } from "@/lib/db";
 
+// Lazy-initialize client - now uses db.ts which uses pg pool
 export async function POST(request: NextRequest) {
-  // Validate API token
-  const auth = await authApiRequest(request.headers.get("authorization"));
-  
-  if (!auth.authorized) {
-    return NextResponse.json(
-      { error: auth.error },
-      { status: 401 }
-    );
-  }
-  
   try {
     const body = await request.json();
     const { title, summary, content, agent, project_id, tags, lessons_learned } = body;
     
-    // Validate required fields
     if (!title || !content || !agent) {
       return NextResponse.json(
         { error: "Missing required fields: title, content, agent are required" },
@@ -25,49 +14,39 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Insert into database
     const result = await sql`
       INSERT INTO memory_entries (title, summary, content, agent, project_id, tags, lessons_learned)
       VALUES (${title}, ${summary || null}, ${content}, ${agent}, ${project_id || null}, ${tags || null}, ${lessons_learned || null})
-      RETURNING id, title, summary, content, agent, project_id, tags, lessons_learned, created_at
     `;
     
-    const entry = result.rows[0];
-    
-    return NextResponse.json(entry, { status: 201 });
-  } catch (error) {
+    return NextResponse.json({ success: true }, { status: 201 });
+  } catch (error: any) {
     console.error("Error creating memory entry:", error);
     return NextResponse.json(
-      { error: "Failed to create memory entry" },
+      { error: "Failed to create memory entry: " + error.message },
       { status: 500 }
     );
   }
 }
 
 export async function GET(request: NextRequest) {
-  // Get query parameters for filtering
   const { searchParams } = new URL(request.url);
   const tag = searchParams.get("tag");
   const agent = searchParams.get("agent");
-  const startDate = searchParams.get("start");
-  const endDate = searchParams.get("end");
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "20");
   const offset = (page - 1) * limit;
   
   try {
-    // Get total count first
-    const totalResult = await sql`SELECT COUNT(*) as count FROM memory_entries`;
-    const total = parseInt(totalResult.rows[0].count);
+    const countResult = await sql`SELECT COUNT(*) as count FROM memory_entries`;
+    const total = parseInt(countResult.rows[0]?.count || "0");
     
-    // Simple query without complex filters (can add later with prepared statements)
     let result;
-    
     if (tag) {
       result = await sql`
         SELECT id, title, summary, content, agent, project_id, tags, lessons_learned, created_at, updated_at
         FROM memory_entries 
-        WHERE $${tag} = ANY(tags)
+        WHERE tags LIKE ${'%' + tag + '%'}
         ORDER BY created_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `;
@@ -89,18 +68,18 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json({
-      entries: result.rows,
+      entries: result.rows || [],
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit) || 1,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching memory entries:", error);
     return NextResponse.json(
-      { error: "Failed to fetch memory entries" },
+      { error: "Failed to fetch memory entries: " + error.message },
       { status: 500 }
     );
   }

@@ -42,7 +42,6 @@ export default function Home() {
         
         <div className="mt-12 text-center text-zinc-500 dark:text-zinc-500 text-sm space-y-1">
           <p>Built by Clawdy's A-Team: A FamGala Production</p>
-          <p>Built with Next.js, Vercel Postgres, and NextAuth.js</p>
         </div>
       </main>
     </div>

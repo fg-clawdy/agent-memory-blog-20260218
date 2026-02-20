@@ -1,4 +1,4 @@
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/db";
 import crypto from "crypto";
 
 export interface ApiToken {
@@ -27,7 +27,7 @@ export async function validateApiToken(token: string): Promise<ApiToken | null> 
     WHERE token_hash = ${tokenHash} AND is_revoked = FALSE
   `;
   
-  if (result.rowCount === 0) {
+  if (!result.rows || result.rows.length === 0) {
     return null;
   }
   

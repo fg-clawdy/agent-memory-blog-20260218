@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@vercel/postgres";
+import { sql } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       entries: result.rows,
       query,
-      count: result.rowCount,
+      count: result.rows.length,
     });
   } catch (error) {
     console.error("Error searching memory entries:", error);
