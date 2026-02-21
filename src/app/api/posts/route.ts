@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { generateEmbedding, prepareTextForEmbedding } from "@/lib/embeddings";
 
-// Lazy-initialize client - now uses db.ts which uses pg pool
+// POST /api/posts - Create a new memory entry with embedding
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const body = await request.json();
     const { title, summary, content, agent, project_id, tags, lessons_learned } = body;
@@ -14,12 +17,52 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const result = await sql`
-      INSERT INTO memory_entries (title, summary, content, agent, project_id, tags, lessons_learned)
-      VALUES (${title}, ${summary || null}, ${content}, ${agent}, ${project_id || null}, ${tags || null}, ${lessons_learned || null})
-    `;
+    // Generate embedding for the content
+    let embedding: number[] | null = null;
+    let embeddingTimeMs: number | null = null;
     
-    return NextResponse.json({ success: true }, { status: 201 });
+    try {
+      const embedStart = Date.now();
+      const textToEmbed = prepareTextForEmbedding(title, content, summary, lessons_learned);
+      embedding = await generateEmbedding(textToEmbed);
+      embeddingTimeMs = Date.now() - embedStart;
+      console.log(`✓ Generated embedding in ${embeddingTimeMs}ms`);
+    } catch (embedError) {
+      console.error("⚠️ Failed to generate embedding:", embedError);
+      // Continue without embedding - entry will still be created
+      embedding = null;
+    }
+    
+    // Insert with embedding
+    let result;
+    if (embedding) {
+      // Insert with embedding
+      result = await sql`
+        INSERT INTO memory_entries (title, summary, content, agent, project_id, tags, lessons_learned, embedding)
+        VALUES (${title}, ${summary || null}, ${content}, ${agent}, ${project_id || null}, ${tags || null}, ${lessons_learned || null}, ${JSON.stringify(embedding)}::vector)
+      `;
+    } else {
+      // Insert without embedding (embedding will be NULL)
+      result = await sql`
+        INSERT INTO memory_entries (title, summary, content, agent, project_id, tags, lessons_learned)
+        VALUES (${title}, ${summary || null}, ${content}, ${agent}, ${project_id || null}, ${tags || null}, ${lessons_learned || null})
+      `;
+    }
+    
+    const totalTimeMs = Date.now() - startTime;
+    
+    return NextResponse.json({ 
+      success: true,
+      embedding: {
+        generated: embedding !== null,
+        timeMs: embeddingTimeMs,
+        dimensions: embedding?.length || null
+      },
+      timing: {
+        totalMs: totalTimeMs
+      }
+    }, { status: 201 });
+    
   } catch (error: any) {
     console.error("Error creating memory entry:", error);
     return NextResponse.json(
@@ -29,6 +72,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// GET /api/posts - List memory entries
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const tag = searchParams.get("tag");
@@ -68,7 +112,7 @@ export async function GET(request: NextRequest) {
     }
     
     return NextResponse.json({
-      entries: result.rows || [],
+      posts: result.rows || [],
       pagination: {
         page,
         limit,
