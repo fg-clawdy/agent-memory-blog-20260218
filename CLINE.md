@@ -1,134 +1,50 @@
-# Task: Configure NextAuth.js with credentials provider
+# Task: vec-001 — Enable pgvector extension and add embedding column
 
 ## Objective
-Set up NextAuth for admin login with aja@ateam.local
+Enable pgvector extension on Vercel Postgres and add embedding column to memory_entries table with HNSW index for fast similarity search.
 
 ## Acceptance Criteria
-- NextAuth.js installed and configured
-- Credentials provider for admin login
-- Session management working
-- Protected /admin routes
+- [ ] pgvector extension enabled on database
+- [ ] embedding column added to memory_entries (vector(1024))
+- [ ] HNSW index created for fast similarity search
+- [ ] Migration script tested locally
+- [ ] Migration runs successfully on production
 
 ## Tech Stack
-- Frontend: Next.js 14 App Router
-- Backend: Next.js API Routes  
-- Database: Vercel Postgres
-- Auth: NextAuth.js v5 (or v4)
+- Next.js 16
+- Vercel Postgres with pgvector
+- Venice.ai text-embedding-bge-m3
 
-## Dependencies
-- story-002: ✅ Complete
+## Implementation Details
 
-## Implementation Steps
+### Migration SQL
+```sql
+-- Enable pgvector
+CREATE EXTENSION IF NOT EXISTS vector;
 
-### 1. Install NextAuth
-```bash
-npm install next-auth
+-- Add embedding column (1024 dimensions for bge-m3)
+ALTER TABLE memory_entries 
+ADD COLUMN IF NOT EXISTS embedding vector(1024);
+
+-- Create HNSW index for fast similarity search
+CREATE INDEX IF NOT EXISTS idx_memory_entries_embedding 
+ON memory_entries USING hnsw (embedding vector_cosine_ops);
 ```
 
-### 2. Create auth configuration
-- `src/app/api/auth/[...nextauth]/route.ts` - NextAuth API route
-- `src/lib/auth.ts` - Auth configuration with credentials provider
-- `src/middleware.ts` - For protecting /admin routes
+### Files to Create
+1. `src/lib/db-migrations/001-enable-pgvector.ts` - Migration script
+2. `src/lib/db-migrations/run-migrations.ts` - Migration runner
+3. `scripts/migrate-pgvector.ts` - CLI script to run migrations
 
-### 3. Auth Config (src/lib/auth.ts)
-```typescript
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { sql } from "@vercel/postgres";
-import bcrypt from "bcrypt";
+### Verification
+- Check extension: `SELECT * FROM pg_extension WHERE extname = 'vector'`
+- Check column: `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'memory_entries'`
+- Check index: `SELECT indexname FROM pg_indexes WHERE tablename = 'memory_entries'`
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      name: "Admin Login",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-        
-        const result = await sql`
-          SELECT id, email, password_hash 
-          FROM admin_users 
-          WHERE email = ${credentials.email}
-        `;
-        
-        if (result.rowCount === 0) {
-          return null;
-        }
-        
-        const user = result.rows[0];
-        const isValid = await bcrypt.compare(credentials.password, user.password_hash);
-        
-        if (!isValid) {
-          return null;
-        }
-        
-        return {
-          id: user.id.toString(),
-          email: user.email,
-        };
-      }
-    })
-  ],
-  pages: {
-    signIn: "/admin/login",
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 hours
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-      }
-      return session;
-    }
-  }
-};
-```
+## Known Pitfalls
+- Vercel Postgres requires superuser to enable extensions - may need to use Vercel CLI or dashboard
+- HNSW index creation may take time on large tables
+- vector(1024) matches Venice.ai bge-m3 model output dimensions
 
-### 4. Create API route (src/app/api/auth/[...nextauth]/route.ts)
-```typescript
-import NextAuth from "next-auth";
-import { authOptions } from "@/lib/auth";
-
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };
-```
-
-### 5. Create middleware (src/middleware.ts)
-```typescript
-export { default } from "next-auth/middleware";
-
-export const config = {
-  matcher: ["/admin/:path*"],
-};
-```
-
-### 6. Create login page (src/app/admin/login/page.tsx)
-- Simple form with email/password
-- Uses NextAuth signIn()
-
-### 7. Create admin layout (src/app/admin/layout.tsx)
-- Check session, redirect to login if not authenticated
-
-## Commit Format
-When done: `git add -A && git commit -m "feat: configure-nextauthjs-with-credentials-provider"`
-
-## CRITICAL
-- Use NextAuth v4 or v5 (check what's latest stable)
-- Protect /admin routes with middleware
-- Do NOT store plain passwords - use bcrypt (already installed)
-- Do NOT start other tasks — only implement THIS task
+## Commit
+When complete: git commit -m "[Agent3-Deb] vec-001: Enable pgvector and add embedding column"

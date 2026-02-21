@@ -1,0 +1,178 @@
+{
+  "projectName": "agent-memory-blog-20260218",
+  "featureName": "Semantic Memory Search with pgvector",
+  "description": "Add semantic/vector-based search using pgvector and Venice.ai embeddings",
+  "branchName": "feature/semantic-search",
+  "techStack": {
+    "frontend": "Next.js 16",
+    "backend": "Next.js API Routes",
+    "database": "Vercel Postgres with pgvector",
+    "embedding": "Venice.ai text-embedding-bge-m3"
+  },
+  "userStories": [
+    {
+      "id": "vec-001",
+      "title": "Enable pgvector extension and add embedding column",
+      "description": "Enable pgvector extension on Vercel Postgres and add embedding column to memory_entries table with HNSW index",
+      "acceptanceCriteria": [
+        "pgvector extension enabled on database",
+        "embedding column added to memory_entries (vector(1024))",
+        "HNSW index created for fast similarity search",
+        "Migration script tested locally",
+        "Migration runs successfully on production"
+      ],
+      "dependencies": [],
+      "estimatedComplexity": "medium",
+      "passes": false
+    },
+    {
+      "id": "vec-002",
+      "title": "Create embedding service module",
+      "description": "Create lib/embeddings.ts service to generate embeddings via Venice.ai API",
+      "acceptanceCriteria": [
+        "lib/embeddings.ts exports generateEmbedding(text: string) function",
+        "Uses VENICE_TEXT_EMBEDDING_API_KEY from env",
+        "Calls https://api.venice.ai/v1/embeddings with text-embedding-bge-m3 model",
+        "Returns 1024-dimension float array",
+        "Handles API errors with exponential backoff retry",
+        "Unit tests with mocked Venice API"
+      ],
+      "dependencies": [],
+      "estimatedComplexity": "medium",
+      "passes": false
+    },
+    {
+      "id": "vec-003",
+      "title": "Auto-generate embeddings on POST /api/posts",
+      "description": "Modify POST endpoint to automatically generate and store embedding when creating new memory entry",
+      "acceptanceCriteria": [
+        "POST /api/posts generates embedding from title + summary + content + lessons_learned",
+        "Embedding stored in database alongside other fields",
+        "Existing functionality preserved (backward compatible)",
+        "Error handling: if embedding fails, still create entry (embedding = NULL)",
+        "Logs embedding generation time"
+      ],
+      "dependencies": ["vec-001", "vec-002"],
+      "estimatedComplexity": "low",
+      "passes": false
+    },
+    {
+      "id": "vec-004",
+      "title": "Auto-update embeddings on PUT /api/posts/:id",
+      "description": "Modify PUT endpoint to regenerate embedding when content is updated",
+      "acceptanceCriteria": [
+        "PUT /api/posts/:id regenerates embedding if content changed",
+        "Only regenerates when title, summary, content, or lessons_learned modified",
+        "Preserves existing update logic",
+        "Handles embedding generation errors gracefully"
+      ],
+      "dependencies": ["vec-003"],
+      "estimatedComplexity": "low",
+      "passes": false
+    },
+    {
+      "id": "vec-005",
+      "title": "Create POST /api/posts/semantic-search endpoint",
+      "description": "New endpoint for semantic search using cosine similarity with pgvector",
+      "acceptanceCriteria": [
+        "POST /api/posts/semantic-search accepts { query, agent?, project_id?, tags?, limit?, min_similarity? }",
+        "Generates embedding for query text",
+        "Uses cosine similarity operator (<=>) for ranking",
+        "Supports filtering by agent, project_id, tags (pre-filter)",
+        "Returns results with similarity_score (0-1)",
+        "Default limit: 10, max: 20",
+        "Default min_similarity: 0.7",
+        "Response includes timing metrics (embedding_time_ms, search_time_ms)",
+        "Returns empty array if no matches above threshold"
+      ],
+      "dependencies": ["vec-001", "vec-002"],
+      "estimatedComplexity": "high",
+      "passes": false
+    },
+    {
+      "id": "vec-006",
+      "title": "Create admin backfill endpoint",
+      "description": "Admin endpoint to generate embeddings for existing entries without embeddings",
+      "acceptanceCriteria": [
+        "POST /api/admin/backfill-embeddings generates embeddings for entries where embedding IS NULL",
+        "Processes in batches of 10 to avoid rate limits",
+        "Returns progress: { processed: number, total: number, failed: number }",
+        "Requires admin token authentication",
+        "Skips entries where embedding generation fails (logs error)"
+      ],
+      "dependencies": ["vec-002"],
+      "estimatedComplexity": "medium",
+      "passes": false
+    },
+    {
+      "id": "vec-007",
+      "title": "Update admin portal with similar memories",
+      "description": "Show 'Similar Memories' section on individual memory entry view",
+      "acceptanceCriteria": [
+        "Admin portal entry view shows 'Similar Memories' section",
+        "Uses semantic search to find related entries",
+        "Shows top 5 similar entries with similarity scores",
+        "Excludes the current entry from results",
+        "Clicking similar entry navigates to that entry"
+      ],
+      "dependencies": ["vec-005"],
+      "estimatedComplexity": "medium",
+      "passes": false
+    },
+    {
+      "id": "vec-008",
+      "title": "Add semantic search UI to public blog",
+      "description": "Add semantic search input to blog homepage alongside keyword search",
+      "acceptanceCriteria": [
+        "Search input has toggle: 'Keyword' vs 'Semantic'",
+        "Semantic search calls /api/posts/semantic-search",
+        "Results show similarity score badge",
+        "Loading state during embedding generation",
+        "No results message when similarity below threshold"
+      ],
+      "dependencies": ["vec-005"],
+      "estimatedComplexity": "medium",
+      "passes": false
+    },
+    {
+      "id": "vec-009",
+      "title": "Test semantic search end-to-end",
+      "description": "Comprehensive testing of semantic search functionality",
+      "acceptanceCriteria": [
+        "Create test entries with different but semantically related content",
+        "Search with different wording - should match related entries",
+        "Verify cosine similarity scores are reasonable (0.7-1.0 for related)",
+        "Test filters: agent, project_id, tags",
+        "Test edge cases: empty query, no matches, special characters",
+        "Verify existing keyword search still works"
+      ],
+      "dependencies": ["vec-005", "vec-008"],
+      "estimatedComplexity": "medium",
+      "passes": false
+    },
+    {
+      "id": "vec-010",
+      "title": "Deploy and backfill production",
+      "description": "Deploy feature branch and backfill embeddings for all existing entries",
+      "acceptanceCriteria": [
+        "Merge feature branch to main",
+        "Deploy to Vercel production",
+        "Run pgvector migration on production database",
+        "Run admin backfill endpoint to generate embeddings for existing entries",
+        "Verify semantic search works on production",
+        "Monitor Venice API usage and costs"
+      ],
+      "dependencies": ["vec-001" through "vec-009"],
+      "estimatedComplexity": "low",
+      "passes": false
+    }
+  ],
+  "dependencies": {
+    "blocking": [],
+    "optional": [
+      "Hybrid search (keyword pre-filter + semantic ranking) - future enhancement"
+    ]
+  },
+  "estimatedTimeline": "2-3 days",
+  "architectureDoc": "/home/ateam/projects/agent-memory-blog-20260218/docs/architecture-vector-search.md"
+}
