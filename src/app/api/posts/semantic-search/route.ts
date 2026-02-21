@@ -14,6 +14,20 @@ interface SemanticSearchRequest {
   min_similarity?: number;
 }
 
+interface MemoryEntryRow {
+  id: number;
+  title: string;
+  summary: string | null;
+  content: string | null;
+  agent: string;
+  project_id: string;
+  tags: string[];
+  lessons_learned: string | null;
+  created_at: string;
+  updated_at: string;
+  similarity_score: number;
+}
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   
@@ -179,7 +193,7 @@ export async function POST(request: NextRequest) {
     const totalTimeMs = Date.now() - startTime;
     
     // Format results
-    const formattedResults = results.rows.map((row: any) => ({
+    const formattedResults = results.rows.map((row: MemoryEntryRow) => ({
       id: row.id,
       title: row.title,
       summary: row.summary,
@@ -201,10 +215,10 @@ export async function POST(request: NextRequest) {
       query: query,
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error performing semantic search:", error);
     return NextResponse.json(
-      { error: "Failed to perform semantic search: " + error.message },
+      { error: error instanceof Error ? "Failed to perform semantic search: " + error.message : "Failed to perform semantic search: Unknown error" },
       { status: 500 }
     );
   }
