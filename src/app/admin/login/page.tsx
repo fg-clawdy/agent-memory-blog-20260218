@@ -43,18 +43,19 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-900">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-zinc-800 rounded-lg shadow">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-zinc-900 px-4 sm:px-6">
+      <div className="w-full max-w-sm space-y-6 p-6 sm:p-8 bg-white dark:bg-zinc-800 rounded-lg shadow">
+        <div className="text-center">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">
             Admin Login
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Sign in to access the admin dashboard
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+        
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-3">
             <div>
               <label htmlFor="email-address" className="sr-only">
                 Email address
@@ -65,7 +66,12 @@ export default function AdminLoginPage() {
                 type="email"
                 autoComplete="email"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 placeholder-gray-500 text-gray-900 dark:text-white rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-zinc-700"
+                className="appearance-none relative block w-full px-3 py-2.5 border border-gray-300 dark:border-zinc-600 
+                           placeholder-gray-500 dark:placeholder-gray-400
+                           text-gray-900 dark:text-white 
+                           bg-white dark:bg-zinc-700
+                           rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                           text-base min-h-[44px]"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -81,7 +87,12 @@ export default function AdminLoginPage() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 dark:border-zinc-600 placeholder-gray-500 text-gray-900 dark:text-white rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-white dark:bg-zinc-700"
+                className="appearance-none relative block w-full px-3 py-2.5 border border-gray-300 dark:border-zinc-600 
+                           placeholder-gray-500 dark:placeholder-gray-400
+                           text-gray-900 dark:text-white 
+                           bg-white dark:bg-zinc-700
+                           rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                           text-base min-h-[44px]"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -90,20 +101,32 @@ export default function AdminLoginPage() {
           </div>
 
           {error && (
-            <div className="text-red-600 dark:text-red-400 text-sm text-center">
+            <div className="text-red-600 dark:text-red-400 text-sm text-center p-2 bg-red-50 dark:bg-red-900/20 rounded">
               {error}
             </div>
           )}
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md
+                       text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800
+                       focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+                       font-medium text-base min-h-[44px] touch-manipulation
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+          >
+            {loading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Signing in...
+              </span>
+            ) : (
+              "Sign in"
+            )}
+          </button>
         </form>
       </div>
     </div>
